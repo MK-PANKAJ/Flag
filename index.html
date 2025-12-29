@@ -2,67 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Realistic Indian Flag</title>
 <style>
-  /* Page Setup */
+  /* 1. Scene Setup */
   body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    background-color: #e0e5ec;
-    margin: 0;
+    background: linear-gradient(to bottom, #87CEEB, #E0F6FF); /* Sky background */
   }
 
-  /* 1. The Flagpole */
-  .flag-pole {
-    position: relative;
+  /* 2. Flagpole */
+  .pole {
     width: 12px;
-    height: 400px;
-    background: linear-gradient(to right, #444, #999, #444); /* Metallic look */
+    height: 60vh;
+    background: linear-gradient(to right, #666, #ccc, #666);
     border-radius: 4px;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.3);
-    z-index: 10;
+    position: relative;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    z-index: 2;
   }
   
-  /* Finial (Ball on top) */
-  .flag-pole::before {
+  /* Finial (Gold ball on top) */
+  .pole::before {
     content: '';
     position: absolute;
-    top: -14px;
+    top: -15px;
     left: -2px;
     width: 16px;
     height: 16px;
-    background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
     border-radius: 50%;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+    background: radial-gradient(circle at 30% 30%, #FFD700, #DAA520);
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
   }
 
-  /* 2. The Flag Container */
+  /* 3. The Flag Container */
   .flag {
+    width: 320px;
+    height: 213px; /* 3:2 Ratio */
     position: relative;
-    width: 350px;
-    height: 230px;
-    margin-top: 10px; /* Offset from top of pole */
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    
-    /* Smooth waving movement */
-    animation: flag-swing 3s ease-in-out infinite alternate;
-    transform-origin: left center;
-  }
-
-  /* 3. The Tricolor Background */
-  .flag-surface {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    /* Indian Flag Colors: Saffron, White, Green */
+    /* This creates the "Base" colors */
     background: linear-gradient(
-      to bottom,
-      #FF9933 0%, #FF9933 33.33%,
-      #FFFFFF 33.33%, #FFFFFF 66.66%,
-      #138808 66.66%, #138808 100%
+      to bottom, 
+      #FF9933 33.33%, /* Saffron */
+      #FFFFFF 33.33%, /* White */
+      #FFFFFF 66.66%, 
+      #138808 66.66%  /* Green */
     );
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transform-origin: left top;
+    
+    /* Animation 1: Physical Flutter (Skewing) */
+    animation: flutter 3s ease-in-out infinite alternate;
   }
 
   /* 4. The Ashoka Chakra (Wheel) */
@@ -71,83 +66,77 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 65px;
-    height: 65px;
-    border: 2px solid #000080; /* Navy Blue */
+    width: 55px;
+    height: 55px;
+    border: 2px solid #000080;
     border-radius: 50%;
     box-sizing: border-box;
     
-    /* Using gradients to draw the 24 spokes */
+    /* CSS Drawing of the 24 Spokes */
     background: 
-      /* Central Hub */
-      radial-gradient(circle at center, #000080 12%, transparent 13%),
-      /* Spokes using conic gradient */
+      /* Center Hub */
+      radial-gradient(circle at center, #000080 10%, transparent 10%),
+      /* The 24 Spokes */
       repeating-conic-gradient(
         from 0deg, 
         transparent 0deg, 
-        transparent 6deg, 
-        #000080 6deg, 
-        #000080 9deg, 
-        transparent 9deg, 
+        transparent 7deg, 
+        #000080 7.5deg, /* Spoke width */
+        transparent 8deg, 
         transparent 15deg
       );
   }
 
-  /* 5. The "Ripple" Lighting Effect (The Realistic Part) */
-  /* This creates the shadows that move across the flag to simulate cloth folding */
-  .flag-ripple {
+  /* 5. The "Ripple" Overlay (The Physics Trick) */
+  /* This overlays a moving shadow/highlight gradient to simulate fabric folds */
+  .flag::after {
+    content: '';
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    
+    /* Complex gradient: Transparent -> Black (Shadow) -> Transparent -> White (Light) */
     background: linear-gradient(
-      to right, 
-      rgba(255,255,255,0.4) 0%, 
-      rgba(0,0,0,0.1) 20%, 
-      rgba(0,0,0,0.3) 40%, 
-      rgba(255,255,255,0.4) 60%, 
-      rgba(0,0,0,0.1) 80%,
-      rgba(255,255,255,0.2) 100%
+      110deg, 
+      rgba(255,255,255,0) 10%, 
+      rgba(255,255,255,0.4) 30%, 
+      rgba(255,255,255,0) 50%, 
+      rgba(0,0,0,0.2) 70%, 
+      rgba(255,255,255,0) 90%
     );
-    background-size: 200% 100%; /* Larger than flag to slide across */
-    mix-blend-mode: hard-light; /* Blends shadow with colors */
-    animation: ripple-move 1.5s infinite linear;
+    
+    background-size: 200% 100%; /* Double width to allow sliding */
+    mix-blend-mode: hard-light; /* Blends shadows realistically with flag colors */
+    
+    /* Animation 2: Moving the ripple */
+    animation: ripple 1.2s infinite linear;
   }
 
-  /* Animations */
-  
-  /* Moves the light/shadow texture across the flag */
-  @keyframes ripple-move {
+  /* --- Animations --- */
+
+  /* Moves the light/shadow across the flag */
+  @keyframes ripple {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
 
-  /* Physically swings the flag slightly */
-  @keyframes flag-swing {
-    0% {
-      transform: skewY(0deg) rotate(0deg);
-    }
-    25% {
-      transform: skewY(2deg) rotate(1deg);
-    }
-    75% {
-      transform: skewY(-2deg) rotate(-1deg);
-    }
-    100% {
-      transform: skewY(0deg) rotate(0deg);
-    }
+  /* Physically swings the flag up and down slightly */
+  @keyframes flutter {
+    0% { transform: skewY(0deg); }
+    25% { transform: skewY(1.5deg) translateY(2px); }
+    75% { transform: skewY(-1.5deg) translateY(-2px); }
+    100% { transform: skewY(0deg); }
   }
 
 </style>
 </head>
 <body>
 
-  <div class="flag-pole">
+  <div class="pole">
     <div class="flag">
-      <div class="flag-surface"></div>
       <div class="chakra"></div>
-      <div class="flag-ripple"></div>
     </div>
   </div>
 
