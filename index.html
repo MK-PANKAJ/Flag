@@ -1,122 +1,373 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Ultra Realistic Indian Flag</title>
-<style>
-    body {
-        margin: 0;
-        height: 100vh;
-        background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-    }
-
-    .flag-container {
-        position: relative;
-        width: 400px;
-        height: 260px;
-        perspective: 1000px; /* Essential for 3D depth */
-        transform-style: preserve-3d;
-    }
-
-    /* The Flagpole */
-    .pole {
-        position: absolute;
-        left: -10px;
-        top: -20px;
-        width: 12px;
-        height: 500px;
-        background: linear-gradient(to right, #434343, #888, #434343);
-        border-radius: 5px;
-        z-index: 10;
-        box-shadow: -5px 5px 10px rgba(0,0,0,0.4);
-    }
-    .pole::before {
-        content: '';
-        position: absolute;
-        top: -15px;
-        left: -4px;
-        width: 20px;
-        height: 20px;
-        background: radial-gradient(circle at 40% 40%, #ffd700, #b8860b);
-        border-radius: 50%;
-    }
-
-    /* This class is applied to every tiny "slice" of the flag.
-       We create the flag by lining up 50 of these slices.
-    */
-    .flag-segment {
-        position: absolute;
-        top: 0;
-        height: 100%;
-        /* The width will be calculated by JS (e.g., 400px / 50 slices = 8px) */
-        background-image: url('https://upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg'); 
-        background-size: 400px 100%; /* Ensure background covers the full theoretical width */
-        background-repeat: no-repeat;
-        
-        /* Physics Animation */
-        animation: wave-motion 1.5s ease-in-out infinite alternate;
-        transform-style: preserve-3d;
-    }
-
-    /* The Keyframe Animation 
-       This moves each slice up/down and rotates it to create the "S-curve" of fabric.
-    */
-    @keyframes wave-motion {
-        0% {
-            transform: translate3d(0, 0, 0) rotateY(0deg);
-            filter: brightness(100%); /* Normal light */
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>Photorealistic 3D Indian Flag</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #87CEEB; /* Sky Blue */
+            background: linear-gradient(to bottom, #7aa1d2, #dbd4b4, #cc99cc); /* Realistic Sky Gradient */
+            overflow: hidden;
+            font-family: sans-serif;
         }
-        50% {
-             /* Peak of the wave: moves slightly up and rotates */
-            transform: translate3d(0, -8px, 15px) rotateY(6deg);
-            filter: brightness(110%); /* Highlight on the curve */
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none;
+            z-index: 10;
         }
-        100% {
-            /* Trough of the wave: moves down and rotates back */
-            transform: translate3d(0, 8px, -15px) rotateY(-6deg);
-            filter: brightness(90%); /* Shadow in the fold */
-        }
-    }
-
-</style>
+    </style>
 </head>
 <body>
 
-    <div class="flag-container" id="flag">
-        <div class="pole"></div>
-        </div>
+    <div id="info">Interactive 3D Flag<br/>Drag to rotate • Scroll to zoom</div>
 
-<script>
-    // Configuration
-    const flagContainer = document.getElementById('flag');
-    const flagWidth = 400;  // Width of the flag in px
-    const slices = 60;      // How many strips to cut the flag into (Higher = smoother)
-    
-    const sliceWidth = flagWidth / slices;
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 
-    // Generate the Slices
-    for (let i = 0; i < slices; i++) {
-        const div = document.createElement('div');
-        div.className = 'flag-segment';
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const DAMPING = 0.03;
+        const DRAG = 1 - DAMPING;
+        const MASS = 0.1;
+        const REST_DISTANCE = 25;
+
+        const xSegs = 20; // Horizontal segments (More = smoother cloth)
+        const ySegs = 15; // Vertical segments
+
+        const clothFunction = plane(REST_DISTANCE * xSegs, REST_DISTANCE * ySegs);
+
+        const GRAVITY = 981 * 1.4;
+        const gravity = new THREE.Vector3(0, -GRAVITY, 0).multiplyScalar(MASS);
+
+        const TIMESTEP = 18 / 1000;
+        const TIMESTEP_SQ = TIMESTEP * TIMESTEP;
+
+        let pins = []; // Pins hold the flag to the pole
+        const windForce = new THREE.Vector3(0, 0, 0);
+        const tmpForce = new THREE.Vector3();
+
+        // Cloth Data Structures
+        const particles = [];
+        const diff = new THREE.Vector3();
+
+        // --- Simulation Physics Classes ---
+
+        class Particle {
+            constructor(x, y, z, mass) {
+                this.position = new THREE.Vector3(x, y, z);
+                this.previous = new THREE.Vector3(x, y, z);
+                this.original = new THREE.Vector3(x, y, z);
+                this.a = new THREE.Vector3(0, 0, 0); // acceleration
+                this.mass = mass;
+                this.invMass = 1 / mass;
+                this.tmp = new THREE.Vector3();
+                this.tmp2 = new THREE.Vector3();
+            }
+
+            // Verlet Integration
+            integrate(timesq) {
+                const newPos = this.tmp.subVectors(this.position, this.previous);
+                newPos.multiplyScalar(DRAG).add(this.position);
+                newPos.add(this.a.multiplyScalar(timesq));
+
+                this.tmp2.copy(this.previous);
+                this.previous.copy(this.position);
+                this.position.copy(newPos);
+                this.a.set(0, 0, 0);
+            }
+        }
+
+        class Cloth {
+            constructor(w, h) {
+                this.w = w;
+                this.h = h;
+                const planes = clothFunction(w, h); // Generate geometry positions
+
+                // Create particles
+                for (let i = 0; i < planes.length; i++) {
+                    const pos = planes[i];
+                    particles.push(new Particle(pos.x, pos.y, pos.z, MASS));
+                }
+
+                // Create constraints (Springs between particles)
+                this.constraints = [];
+                const u = w;
+                const v = h;
+
+                // Helper to add constraint
+                const constrain = (u, v, idx0, idx1) => {
+                     this.constraints.push([particles[idx0], particles[idx1], REST_DISTANCE]);
+                };
+
+                for (let v = 0; v < h; v++) {
+                    for (let u = 0; u < w; u++) {
+                        if (u < w - 1) constrain(u, v, index(u, v), index(u + 1, v));
+                        if (v < h - 1) constrain(u, v, index(u, v), index(u, v + 1));
+                    }
+                }
+
+                // Pin the left edge (Flagpole side)
+                for (let v = 0; v <= h; v++) {
+                    pins.push(index(0, v));
+                }
+            }
+
+            update(time) {
+                // Wind Physics (Dynamic noise)
+                const windStrength = Math.cos(time / 7000) * 20 + 40;
+                windForce.set(Math.sin(time / 2000), Math.cos(time / 3000), Math.sin(time / 1000));
+                windForce.normalize().multiplyScalar(windStrength);
+
+                // Apply forces
+                for (let i = 0; i < particles.length; i++) {
+                    const particle = particles[i];
+                    particle.a.add(gravity);
+                    particle.a.add(windForce); // Add wind
+                }
+
+                // Integrate
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].integrate(TIMESTEP_SQ);
+                }
+
+                // Satisfy Constraints (Keep cloth from stretching infinitely)
+                for (let i = 0; i < this.constraints.length; i++) {
+                    const constraint = this.constraints[i];
+                    const p1 = constraint[0];
+                    const p2 = constraint[1];
+                    const distance = constraint[2];
+
+                    diff.subVectors(p2.position, p1.position);
+                    const currentDist = diff.length();
+                    if (currentDist === 0) continue; // avoid division by 0
+
+                    const correction = diff.multiplyScalar(1 - distance / currentDist);
+                    const correctionHalf = correction.multiplyScalar(0.5);
+
+                    p1.position.add(correctionHalf);
+                    p2.position.sub(correctionHalf);
+                }
+
+                // Pin Constraints (Lock to pole)
+                for (let i = 0; i < pins.length; i++) {
+                    const xy = pins[i];
+                    const p = particles[xy];
+                    p.position.copy(p.original);
+                    p.previous.copy(p.original);
+                }
+            }
+        }
+
+        function plane(width, height) {
+            return function(u, v) {
+                const x = (u / xSegs) * width;
+                const y = (v / ySegs) * height;
+                const z = 0;
+                // Return grid of points
+                const grid = [];
+                for (let iv = 0; iv <= ySegs; iv++) {
+                    for (let iu = 0; iu <= xSegs; iu++) {
+                         grid.push(new THREE.Vector3(
+                             (iu / xSegs) * width, 
+                             (iv / ySegs) * height, 
+                             0
+                         ));
+                    }
+                }
+                return grid;
+            };
+        }
+
+        function index(u, v) {
+            return u + v * (xSegs + 1);
+        }
+
+        // --- Texture Generation (Procedural Indian Flag) ---
+        function createFlagTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 768; // 4:3 approx for texture mapping
+            const ctx = canvas.getContext('2d');
+
+            // 1. Saffron
+            ctx.fillStyle = '#FF9933';
+            ctx.fillRect(0, 0, 1024, 256);
+
+            // 2. White
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 256, 1024, 256);
+
+            // 3. Green
+            ctx.fillStyle = '#138808';
+            ctx.fillRect(0, 512, 1024, 256);
+
+            // 4. Chakra
+            const centerX = 512;
+            const centerY = 384;
+            const radius = 100;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#000080';
+            ctx.lineWidth = 10;
+            ctx.stroke();
+
+            // Spokes
+            ctx.strokeStyle = '#000080';
+            ctx.lineWidth = 4;
+            for (let i = 0; i < 24; i++) {
+                const angle = (i * 15) * (Math.PI / 180);
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius);
+                ctx.stroke();
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.anisotropy = 16;
+            return texture;
+        }
+
+        // --- Main Scene Setup ---
         
-        // 1. Set the width and position of this slice
-        div.style.width = sliceWidth + 'px';
-        div.style.left = (i * sliceWidth) + 'px';
-        
-        // 2. Shift the background image so this slice shows the correct part of the flag
-        div.style.backgroundPosition = `-${i * sliceWidth}px 0`;
+        let container, stats;
+        let camera, scene, renderer;
+        let clothGeometry;
+        let object;
 
-        // 3. THE PHYSICS: Add a delay to the animation
-        // The delay increases as we go right, creating the "traveling wave" effect.
-        div.style.animationDelay = `${i * 0.05}s`; // 0.05s delay per slice
-        
-        flagContainer.appendChild(div);
-    }
-</script>
+        init();
+        animate(0);
 
+        function init() {
+            container = document.createElement('div');
+            document.body.appendChild(container);
+
+            // Scene
+            scene = new THREE.Scene();
+            // Fog for atmospheric depth
+            scene.fog = new THREE.Fog(0xcce0ff, 500, 10000);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.set(1000, 50, 1500);
+
+            // Lights
+            scene.add(new THREE.AmbientLight(0x666666));
+            const light = new THREE.DirectionalLight(0xdfebff, 2.5);
+            light.position.set(50, 200, 100);
+            light.castShadow = true;
+            
+            // Refine shadows
+            light.shadow.mapSize.width = 1024;
+            light.shadow.mapSize.height = 1024;
+            const d = 300;
+            light.shadow.camera.left = -d;
+            light.shadow.camera.right = d;
+            light.shadow.camera.top = d;
+            light.shadow.camera.bottom = -d;
+            light.shadow.camera.far = 1000;
+            scene.add(light);
+
+            // Cloth Material & Geometry
+            const clothTexture = createFlagTexture();
+            const clothMaterial = new THREE.MeshStandardMaterial({
+                map: clothTexture,
+                side: THREE.DoubleSide, // Render both sides
+                roughness: 0.8,         // Fabric texture
+                metalness: 0.1,
+                bumpScale: 0.02
+            });
+
+            // Create geometry based on grid segments
+            clothGeometry = new THREE.PlaneGeometry(1, 1, xSegs, ySegs);
+            // Orient correctly
+            object = new THREE.Mesh(clothGeometry, clothMaterial);
+            object.position.set(0, 0, 0);
+            object.castShadow = true;
+            object.receiveShadow = true; 
+            scene.add(object);
+
+            // Flagpole
+            const poleGeo = new THREE.CylinderGeometry(5, 5, 750, 32);
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.4, metalness: 0.6 });
+            const pole = new THREE.Mesh(poleGeo, poleMat);
+            pole.position.x = -12;
+            pole.position.y = -200; // Center pole relative to flag
+            pole.receiveShadow = true;
+            pole.castShadow = true;
+            scene.add(pole);
+
+            // Finial (Ball)
+            const ballGeo = new THREE.SphereGeometry(10, 32, 32);
+            const ballMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, metalness: 0.8, roughness: 0.2 });
+            const ball = new THREE.Mesh(ballGeo, ballMat);
+            ball.position.set(-12, 175, 0); // Top of pole
+            scene.add(ball);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.maxPolarAngle = Math.PI * 0.5;
+            controls.minDistance = 500;
+            controls.maxDistance = 5000;
+
+            window.addEventListener('resize', onWindowResize);
+            
+            // Initialize Cloth Object
+            window.cloth = new Cloth(xSegs, ySegs);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate(now) {
+            requestAnimationFrame(animate);
+
+            const time = Date.now();
+
+            // 1. Run Physics
+            window.cloth.update(time);
+
+            // 2. Sync Physics Data to Visual Mesh
+            const p = window.cloth.particles;
+            const positions = object.geometry.attributes.position;
+            
+            for (let i = 0; i < particles.length; i++) {
+                // Update every vertex position based on physics simulation
+                positions.setXYZ(i, particles[i].position.x, particles[i].position.y, particles[i].position.z);
+            }
+            
+            positions.needsUpdate = true; // Tell GPU to update geometry
+            object.geometry.computeVertexNormals(); // Recalculate lighting/shadows
+
+            renderer.render(scene, camera);
+        }
+    </script>
 </body>
 </html>
