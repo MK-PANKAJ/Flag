@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Realistic Indian Flag</title>
+<style>
+  /* Page Setup */
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #e0e5ec;
+    margin: 0;
+  }
+
+  /* 1. The Flagpole */
+  .flag-pole {
+    position: relative;
+    width: 12px;
+    height: 400px;
+    background: linear-gradient(to right, #444, #999, #444); /* Metallic look */
+    border-radius: 4px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+    z-index: 10;
+  }
+  
+  /* Finial (Ball on top) */
+  .flag-pole::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: -2px;
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
+    border-radius: 50%;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+  }
+
+  /* 2. The Flag Container */
+  .flag {
+    position: relative;
+    width: 350px;
+    height: 230px;
+    margin-top: 10px; /* Offset from top of pole */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    
+    /* Smooth waving movement */
+    animation: flag-swing 3s ease-in-out infinite alternate;
+    transform-origin: left center;
+  }
+
+  /* 3. The Tricolor Background */
+  .flag-surface {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    /* Indian Flag Colors: Saffron, White, Green */
+    background: linear-gradient(
+      to bottom,
+      #FF9933 0%, #FF9933 33.33%,
+      #FFFFFF 33.33%, #FFFFFF 66.66%,
+      #138808 66.66%, #138808 100%
+    );
+  }
+
+  /* 4. The Ashoka Chakra (Wheel) */
+  .chakra {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 65px;
+    height: 65px;
+    border: 2px solid #000080; /* Navy Blue */
+    border-radius: 50%;
+    box-sizing: border-box;
+    
+    /* Using gradients to draw the 24 spokes */
+    background: 
+      /* Central Hub */
+      radial-gradient(circle at center, #000080 12%, transparent 13%),
+      /* Spokes using conic gradient */
+      repeating-conic-gradient(
+        from 0deg, 
+        transparent 0deg, 
+        transparent 6deg, 
+        #000080 6deg, 
+        #000080 9deg, 
+        transparent 9deg, 
+        transparent 15deg
+      );
+  }
+
+  /* 5. The "Ripple" Lighting Effect (The Realistic Part) */
+  /* This creates the shadows that move across the flag to simulate cloth folding */
+  .flag-ripple {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      to right, 
+      rgba(255,255,255,0.4) 0%, 
+      rgba(0,0,0,0.1) 20%, 
+      rgba(0,0,0,0.3) 40%, 
+      rgba(255,255,255,0.4) 60%, 
+      rgba(0,0,0,0.1) 80%,
+      rgba(255,255,255,0.2) 100%
+    );
+    background-size: 200% 100%; /* Larger than flag to slide across */
+    mix-blend-mode: hard-light; /* Blends shadow with colors */
+    animation: ripple-move 1.5s infinite linear;
+  }
+
+  /* Animations */
+  
+  /* Moves the light/shadow texture across the flag */
+  @keyframes ripple-move {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Physically swings the flag slightly */
+  @keyframes flag-swing {
+    0% {
+      transform: skewY(0deg) rotate(0deg);
+    }
+    25% {
+      transform: skewY(2deg) rotate(1deg);
+    }
+    75% {
+      transform: skewY(-2deg) rotate(-1deg);
+    }
+    100% {
+      transform: skewY(0deg) rotate(0deg);
+    }
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="flag-pole">
+    <div class="flag">
+      <div class="flag-surface"></div>
+      <div class="chakra"></div>
+      <div class="flag-ripple"></div>
+    </div>
+  </div>
+
+</body>
+</html>
