@@ -2,143 +2,121 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Realistic Indian Flag</title>
+<title>Ultra Realistic Indian Flag</title>
 <style>
-  /* 1. Scene Setup */
-  body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(to bottom, #87CEEB, #E0F6FF); /* Sky background */
-  }
+    body {
+        margin: 0;
+        height: 100vh;
+        background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+    }
 
-  /* 2. Flagpole */
-  .pole {
-    width: 12px;
-    height: 60vh;
-    background: linear-gradient(to right, #666, #ccc, #666);
-    border-radius: 4px;
-    position: relative;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-    z-index: 2;
-  }
-  
-  /* Finial (Gold ball on top) */
-  .pole::before {
-    content: '';
-    position: absolute;
-    top: -15px;
-    left: -2px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #FFD700, #DAA520);
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-  }
+    .flag-container {
+        position: relative;
+        width: 400px;
+        height: 260px;
+        perspective: 1000px; /* Essential for 3D depth */
+        transform-style: preserve-3d;
+    }
 
-  /* 3. The Flag Container */
-  .flag {
-    width: 320px;
-    height: 213px; /* 3:2 Ratio */
-    position: relative;
-    /* This creates the "Base" colors */
-    background: linear-gradient(
-      to bottom, 
-      #FF9933 33.33%, /* Saffron */
-      #FFFFFF 33.33%, /* White */
-      #FFFFFF 66.66%, 
-      #138808 66.66%  /* Green */
-    );
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    transform-origin: left top;
-    
-    /* Animation 1: Physical Flutter (Skewing) */
-    animation: flutter 3s ease-in-out infinite alternate;
-  }
+    /* The Flagpole */
+    .pole {
+        position: absolute;
+        left: -10px;
+        top: -20px;
+        width: 12px;
+        height: 500px;
+        background: linear-gradient(to right, #434343, #888, #434343);
+        border-radius: 5px;
+        z-index: 10;
+        box-shadow: -5px 5px 10px rgba(0,0,0,0.4);
+    }
+    .pole::before {
+        content: '';
+        position: absolute;
+        top: -15px;
+        left: -4px;
+        width: 20px;
+        height: 20px;
+        background: radial-gradient(circle at 40% 40%, #ffd700, #b8860b);
+        border-radius: 50%;
+    }
 
-  /* 4. The Ashoka Chakra (Wheel) */
-  .chakra {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 55px;
-    height: 55px;
-    border: 2px solid #000080;
-    border-radius: 50%;
-    box-sizing: border-box;
-    
-    /* CSS Drawing of the 24 Spokes */
-    background: 
-      /* Center Hub */
-      radial-gradient(circle at center, #000080 10%, transparent 10%),
-      /* The 24 Spokes */
-      repeating-conic-gradient(
-        from 0deg, 
-        transparent 0deg, 
-        transparent 7deg, 
-        #000080 7.5deg, /* Spoke width */
-        transparent 8deg, 
-        transparent 15deg
-      );
-  }
+    /* This class is applied to every tiny "slice" of the flag.
+       We create the flag by lining up 50 of these slices.
+    */
+    .flag-segment {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        /* The width will be calculated by JS (e.g., 400px / 50 slices = 8px) */
+        background-image: url('https://upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg'); 
+        background-size: 400px 100%; /* Ensure background covers the full theoretical width */
+        background-repeat: no-repeat;
+        
+        /* Physics Animation */
+        animation: wave-motion 1.5s ease-in-out infinite alternate;
+        transform-style: preserve-3d;
+    }
 
-  /* 5. The "Ripple" Overlay (The Physics Trick) */
-  /* This overlays a moving shadow/highlight gradient to simulate fabric folds */
-  .flag::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    
-    /* Complex gradient: Transparent -> Black (Shadow) -> Transparent -> White (Light) */
-    background: linear-gradient(
-      110deg, 
-      rgba(255,255,255,0) 10%, 
-      rgba(255,255,255,0.4) 30%, 
-      rgba(255,255,255,0) 50%, 
-      rgba(0,0,0,0.2) 70%, 
-      rgba(255,255,255,0) 90%
-    );
-    
-    background-size: 200% 100%; /* Double width to allow sliding */
-    mix-blend-mode: hard-light; /* Blends shadows realistically with flag colors */
-    
-    /* Animation 2: Moving the ripple */
-    animation: ripple 1.2s infinite linear;
-  }
-
-  /* --- Animations --- */
-
-  /* Moves the light/shadow across the flag */
-  @keyframes ripple {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  /* Physically swings the flag up and down slightly */
-  @keyframes flutter {
-    0% { transform: skewY(0deg); }
-    25% { transform: skewY(1.5deg) translateY(2px); }
-    75% { transform: skewY(-1.5deg) translateY(-2px); }
-    100% { transform: skewY(0deg); }
-  }
+    /* The Keyframe Animation 
+       This moves each slice up/down and rotates it to create the "S-curve" of fabric.
+    */
+    @keyframes wave-motion {
+        0% {
+            transform: translate3d(0, 0, 0) rotateY(0deg);
+            filter: brightness(100%); /* Normal light */
+        }
+        50% {
+             /* Peak of the wave: moves slightly up and rotates */
+            transform: translate3d(0, -8px, 15px) rotateY(6deg);
+            filter: brightness(110%); /* Highlight on the curve */
+        }
+        100% {
+            /* Trough of the wave: moves down and rotates back */
+            transform: translate3d(0, 8px, -15px) rotateY(-6deg);
+            filter: brightness(90%); /* Shadow in the fold */
+        }
+    }
 
 </style>
 </head>
 <body>
 
-  <div class="pole">
-    <div class="flag">
-      <div class="chakra"></div>
-    </div>
-  </div>
+    <div class="flag-container" id="flag">
+        <div class="pole"></div>
+        </div>
+
+<script>
+    // Configuration
+    const flagContainer = document.getElementById('flag');
+    const flagWidth = 400;  // Width of the flag in px
+    const slices = 60;      // How many strips to cut the flag into (Higher = smoother)
+    
+    const sliceWidth = flagWidth / slices;
+
+    // Generate the Slices
+    for (let i = 0; i < slices; i++) {
+        const div = document.createElement('div');
+        div.className = 'flag-segment';
+        
+        // 1. Set the width and position of this slice
+        div.style.width = sliceWidth + 'px';
+        div.style.left = (i * sliceWidth) + 'px';
+        
+        // 2. Shift the background image so this slice shows the correct part of the flag
+        div.style.backgroundPosition = `-${i * sliceWidth}px 0`;
+
+        // 3. THE PHYSICS: Add a delay to the animation
+        // The delay increases as we go right, creating the "traveling wave" effect.
+        div.style.animationDelay = `${i * 0.05}s`; // 0.05s delay per slice
+        
+        flagContainer.appendChild(div);
+    }
+</script>
 
 </body>
 </html>
